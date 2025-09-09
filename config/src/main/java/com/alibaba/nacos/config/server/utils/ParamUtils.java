@@ -242,6 +242,7 @@ public class ParamUtils {
     /**
      * encode name.
      */
+    @SuppressWarnings("PMD.AvoidComplexConditionRule")
     public static String encodeName(String name) {
         if (isValid(name)) {
             return name;
@@ -295,6 +296,7 @@ public class ParamUtils {
         return sb.toString();
     }
     
+    @SuppressWarnings("PMD.AvoidComplexConditionRule")
     private static boolean isHex(String s) {
         for (char c : s.toCharArray()) {
             if (!Character.isDigit(c) && (c < 'a' || c > 'f') && (c < 'A' || c > 'F')) {
