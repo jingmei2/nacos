@@ -14,31 +14,25 @@
  * limitations under the License.
  */
 
-package com.alibaba.nacos.plugin.datasource.constants;
+package com.alibaba.nacos.plugin.datasource.dialect;
+
+import com.alibaba.nacos.plugin.datasource.constants.DatabaseTypeConstant;
+import com.alibaba.nacos.plugin.datasource.enums.mysql.TrustedMysqlFunctionEnum;
 
 /**
- * DatabaseType Constant.
+ * MySQL database dialect.
  *
- * @author Long Yu
- **/
-public class DatabaseTypeConstant {
+ * @author xiweng.yy
+ */
+public class MysqlDatabaseDialect extends AbstractDatabaseDialect {
 
-    public static final String POSTGRESQL = "postgresql";
+    @Override
+    public String getType() {
+        return DatabaseTypeConstant.MYSQL;
+    }
 
-    public static final String GUASSDB = "gaussdb";
-
-    public static final String MYSQL = "mysql";
-
-    public static final String ORACLE = "oracle";
-
-    public static final String DM = "dm";
-
-    public static final String SQLSERVER = "sqlserver";
-
-    public static final String KINGBASE = "kingbase";
-
-    public static final String YASDB = "yasdb";
-
-    public static final String DERBY = "derby";
-
+    @Override
+    public String getFunction(String functionName) {
+        return TrustedMysqlFunctionEnum.getFunctionByName(functionName);
+    }
 }
