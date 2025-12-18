@@ -25,7 +25,7 @@ import com.alibaba.nacos.plugin.datasource.impl.base.BaseConfigTagsRelationMappe
  * @author Long Yu
  **/
 
-public class ConfigTagsRelationMapperByPostgresql extends BaseConfigTagsRelationMapper{
+public class ConfigTagsRelationMapperByPostgresql extends BaseConfigTagsRelationMapper {
     
     @Override
     public String getDataSource() {

@@ -16,8 +16,6 @@
 
 package com.alibaba.nacos.plugin.datasource.dialect;
 
-import com.alibaba.nacos.plugin.datasource.mapper.Mapper;
-
 /**
  * DatabaseDialect interface.
  * @author Long Yu

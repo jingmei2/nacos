@@ -16,7 +16,6 @@
 
 package com.alibaba.nacos.plugin.datasource.impl.base;
 
-
 import com.alibaba.nacos.common.utils.StringUtils;
 import com.alibaba.nacos.plugin.datasource.constants.FieldConstant;
 import com.alibaba.nacos.plugin.datasource.constants.TableConstant;

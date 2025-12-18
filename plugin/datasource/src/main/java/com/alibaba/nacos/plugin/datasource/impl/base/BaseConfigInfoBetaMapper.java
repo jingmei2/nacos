@@ -16,7 +16,6 @@
 
 package com.alibaba.nacos.plugin.datasource.impl.base;
 
-
 import com.alibaba.nacos.plugin.datasource.constants.TableConstant;
 import com.alibaba.nacos.plugin.datasource.dialect.DatabaseDialect;
 import com.alibaba.nacos.plugin.datasource.impl.mysql.ConfigInfoBetaMapperByMySql;

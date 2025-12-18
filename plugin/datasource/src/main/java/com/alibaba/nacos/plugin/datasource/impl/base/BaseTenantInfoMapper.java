@@ -32,7 +32,5 @@ public class BaseTenantInfoMapper extends TenantInfoMapperByMySql {
     public BaseTenantInfoMapper() {
         databaseDialect = DatabaseDialectManager.getInstance().getDialect(getDataSource());
     }
-
-
-
+    
 }
