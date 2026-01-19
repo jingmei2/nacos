@@ -13,136 +13,124 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
+
 package com.alibaba.nacos.client.utils;
 
-import java.io.InputStream;
-import java.util.Properties;
-
-import com.alibaba.nacos.client.config.impl.HttpSimpleClient;
-import com.alibaba.nacos.client.config.utils.LogUtils;
-import com.alibaba.nacos.client.config.utils.ParamUtils;
-import com.alibaba.nacos.client.logger.Logger;
+import com.alibaba.nacos.client.env.NacosClientProperties;
+import com.alibaba.nacos.common.utils.MD5Utils;
+import com.alibaba.nacos.common.utils.StringUtils;
+import org.slf4j.Logger;
 
 /**
- * manage param tool
+ * manage param tool.
  *
  * @author nacos
  */
 public class ParamUtil {
-    final static public Logger log = LogUtils.logger(ParamUtils.class);
-
-    private static String defaultContextPath = "nacos";
-    private static String defaultNodesPath = "serverlist";
-    private static String appKey;
-    private static String appName;
-    private static String defaultServerPort;
-    private static String clientVersion = "unknown";
+    
+    private static final Logger LOGGER = LogUtils.logger(ParamUtil.class);
+    
     private static int connectTimeout;
-    private static double perTaskConfigSize = 3000;
-
+    
+    private static int readTimeout;
+    
+    private static double perTaskConfigSize;
+    
+    private static final String NACOS_CONNECT_TIMEOUT_KEY = "NACOS.CONNECT.TIMEOUT";
+    
+    private static final String NACOS_READ_TIMEOUT_KEY = "NACOS.READ.TIMEOUT";
+    
+    private static final String DEFAULT_NACOS_CONNECT_TIMEOUT = "1000";
+    
+    private static final String DEFAULT_NACOS_READ_TIMEOUT = "3000";
+    
+    private static final String PER_TASK_CONFIG_SIZE_KEY = "PER_TASK_CONFIG_SIZE";
+    
+    private static final String DEFAULT_PER_TASK_CONFIG_SIZE_KEY = "3000";
+    
     static {
-        // 客户端身份信息
-        appKey = System.getProperty("nacos.client.appKey", "");
-
-        appName = AppNameUtils.getAppName();
-
-        String defaultServerPortTmp = "8848";
-
-        defaultServerPort = System.getProperty("nacos.server.port", defaultServerPortTmp);
-        log.info("settings", "[req-serv] nacos-server port:{}", defaultServerPort);
-
-        String tmp = "1000";
+        // Client identity information
+        connectTimeout = initConnectionTimeout();
+        LOGGER.info("[settings] [http-client] connect timeout:{}", connectTimeout);
+        
+        readTimeout = initReadTimeout();
+        LOGGER.info("[settings] [http-client] read timeout:{}", readTimeout);
+        
+        perTaskConfigSize = initPerTaskConfigSize();
+        LOGGER.info("PER_TASK_CONFIG_SIZE: {}", perTaskConfigSize);
+    }
+    
+    private static int initConnectionTimeout() {
+        String tmp = DEFAULT_NACOS_CONNECT_TIMEOUT;
         try {
-            tmp = System.getProperty("NACOS.CONNECT.TIMEOUT", "1000");
-            connectTimeout = Integer.parseInt(tmp);
+            tmp = NacosClientProperties.PROTOTYPE.getProperty(NACOS_CONNECT_TIMEOUT_KEY, DEFAULT_NACOS_CONNECT_TIMEOUT);
+            return Integer.parseInt(tmp);
         } catch (NumberFormatException e) {
             final String msg = "[http-client] invalid connect timeout:" + tmp;
-            log.error("settings", "NACOS-XXXX", msg, e);
+            LOGGER.error("[settings] " + msg, e);
             throw new IllegalArgumentException(msg, e);
         }
-        log.info("settings", "[http-client] connect timeout:{}", connectTimeout);
-
+    }
+    
+    private static int initReadTimeout() {
+        String tmp = DEFAULT_NACOS_READ_TIMEOUT;
         try {
-            InputStream in = HttpSimpleClient.class.getClassLoader()
-                .getResourceAsStream("application.properties");
-            Properties props = new Properties();
-            props.load(in);
-            String val = null;
-            val = props.getProperty("version");
-            if (val != null) {
-                clientVersion = val;
-            }
-            log.info("NACOS_CLIENT_VERSION:{}", clientVersion);
-        } catch (Exception e) {
-            log.error("500", "read application.properties", e);
-        }
-
-        try {
-            perTaskConfigSize = Double.valueOf(System.getProperty("PER_TASK_CONFIG_SIZE", "3000"));
-            log.warn("PER_TASK_CONFIG_SIZE:", perTaskConfigSize);
-        } catch (Throwable t) {
-            log.error("PER_TASK_CONFIG_SIZE", "PER_TASK_CONFIG_SIZE invalid", t);
+            tmp = NacosClientProperties.PROTOTYPE.getProperty(NACOS_READ_TIMEOUT_KEY, DEFAULT_NACOS_READ_TIMEOUT);
+            return Integer.parseInt(tmp);
+        } catch (NumberFormatException e) {
+            final String msg = "[http-client] invalid read timeout:" + tmp;
+            LOGGER.error("[settings] " + msg, e);
+            throw new IllegalArgumentException(msg, e);
         }
     }
-
-    public static String getAppKey() {
-        return appKey;
+    
+    private static double initPerTaskConfigSize() {
+        try {
+            return Double.parseDouble(NacosClientProperties.PROTOTYPE.getProperty(PER_TASK_CONFIG_SIZE_KEY,
+                    DEFAULT_PER_TASK_CONFIG_SIZE_KEY));
+        } catch (NumberFormatException e) {
+            LOGGER.error("[PER_TASK_CONFIG_SIZE] PER_TASK_CONFIG_SIZE invalid", e);
+            throw new IllegalArgumentException("invalid PER_TASK_CONFIG_SIZE, expected value type double", e);
+        }
     }
-
-    public static void setAppKey(String appKey) {
-        ParamUtil.appKey = appKey;
-    }
-
-    public static String getAppName() {
-        return appName;
-    }
-
-    public static void setAppName(String appName) {
-        ParamUtil.appName = appName;
-    }
-
-    public static String getDefaultContextPath() {
-        return defaultContextPath;
-    }
-
-    public static void setDefaultContextPath(String defaultContextPath) {
-        ParamUtil.defaultContextPath = defaultContextPath;
-    }
-
-    public static String getClientVersion() {
-        return clientVersion;
-    }
-
-    public static void setClientVersion(String clientVersion) {
-        ParamUtil.clientVersion = clientVersion;
-    }
-
+    
     public static int getConnectTimeout() {
         return connectTimeout;
     }
-
+    
     public static void setConnectTimeout(int connectTimeout) {
         ParamUtil.connectTimeout = connectTimeout;
     }
-
+    
+    public static int getReadTimeout() {
+        return readTimeout;
+    }
+    
+    public static void setReadTimeout(int readTimeout) {
+        ParamUtil.readTimeout = readTimeout;
+    }
+    
     public static double getPerTaskConfigSize() {
         return perTaskConfigSize;
     }
-
+    
     public static void setPerTaskConfigSize(double perTaskConfigSize) {
         ParamUtil.perTaskConfigSize = perTaskConfigSize;
     }
-
-    public static String getDefaultServerPort() {
-        return defaultServerPort;
+    
+    public static final int MAX_ENV_NAME_LENGTH = 50;
+    
+    /**
+     * simply env name if name is too long.
+     *
+     * @param envName env name.
+     * @return env name.
+     */
+    public static String simplyEnvNameIfOverLimit(String envName) {
+        if (StringUtils.isNotBlank(envName) && envName.length() > MAX_ENV_NAME_LENGTH) {
+            return envName.substring(0, MAX_ENV_NAME_LENGTH) + MD5Utils.md5Hex(envName, "UTF-8");
+        }
+        return envName;
     }
-
-    public static String getDefaultNodesPath() {
-        return defaultNodesPath;
-    }
-
-    public static void setDefaultNodesPath(String defaultNodesPath) {
-        ParamUtil.defaultNodesPath = defaultNodesPath;
-    }
-
+    
 }

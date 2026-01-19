@@ -13,25 +13,53 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
+
 package com.alibaba.nacos.api.selector;
 
-/**
- * Abstract selector that only contains a type
- *
- * @author <a href="mailto:zpf.073@gmail.com">nkorange</a>
- */
-public abstract class AbstractSelector {
+import com.alibaba.nacos.api.exception.NacosException;
+import com.alibaba.nacos.api.naming.pojo.Instance;
+import com.fasterxml.jackson.annotation.JsonTypeInfo;
+import com.fasterxml.jackson.annotation.JsonTypeInfo.Id;
 
+import java.io.Serializable;
+import java.util.List;
+
+/**
+ * Abstract selector that only contains a type, used for api to set selector type without actual selector logic.
+ *
+ * @author nkorange
+ * @since 0.7.0
+ */
+@JsonTypeInfo(use = Id.NAME, property = "type", defaultImpl = NoneSelector.class)
+public abstract class AbstractSelector implements Serializable, Selector<List<Instance>, List<Instance>, String> {
+    
+    private static final long serialVersionUID = 4530233098102379229L;
+    
     /**
      * The type of this selector, each child class should announce its own unique type.
      */
-    private String type;
-
+    private final String type;
+    
+    protected AbstractSelector(String type) {
+        this.type = type;
+    }
+    
     public String getType() {
         return type;
     }
-
-    protected void setType(String type) {
-        this.type = type;
+    
+    @Override
+    public Selector<List<Instance>, List<Instance>, String> parse(String expression) throws NacosException {
+        return null;
+    }
+    
+    @Override
+    public List<Instance> select(List<Instance> context) {
+        return context;
+    }
+    
+    @Override
+    public String getContextType() {
+        return SelectorType.none.name();
     }
 }

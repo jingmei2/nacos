@@ -13,60 +13,27 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
+
 package com.alibaba.nacos.naming.healthcheck;
 
-
-import com.alibaba.nacos.naming.core.IpAddress;
-import com.alibaba.nacos.naming.misc.Loggers;
-
-import java.util.concurrent.ConcurrentHashMap;
-import java.util.concurrent.ConcurrentMap;
+import java.io.Serializable;
 import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.atomic.AtomicInteger;
 
 /**
+ * Health check status.
+ *
  * @author nacos
  */
-public class HealthCheckStatus {
+public class HealthCheckStatus implements Serializable {
+    
+    private static final long serialVersionUID = -5791320072773064978L;
+    
     public AtomicBoolean isBeingChecked = new AtomicBoolean(false);
+    
     public AtomicInteger checkFailCount = new AtomicInteger(0);
-    public AtomicInteger checkOKCount = new AtomicInteger(0);
-    public long checkRT = -1L;
-
-    private static ConcurrentMap<String, HealthCheckStatus> statusMap =
-            new ConcurrentHashMap<String, HealthCheckStatus>();
-
-    public static void reset(IpAddress ip) {
-        statusMap.put(buildKey(ip), new HealthCheckStatus());
-    }
-
-    public static HealthCheckStatus get(IpAddress ip) {
-        String key = buildKey(ip);
-
-        if (!statusMap.containsKey(key)) {
-            statusMap.putIfAbsent(key, new HealthCheckStatus());
-        }
-
-        return statusMap.get(key);
-    }
-
-    public static void remv(IpAddress ip) {
-        statusMap.remove(buildKey(ip));
-    }
-
-    private static String buildKey(IpAddress ip) {
-        try {
-
-            String clusterName = ip.getClusterName();
-            String dom = ip.getServiceName();
-            String datumKey = ip.getDatumKey();
-            return dom + ":"
-                    + clusterName + ":"
-                    + datumKey;
-        } catch (Throwable e) {
-            Loggers.SRV_LOG.error("BUILD-KEY", "Exception while set rt, ip " + ip.toJSON(), e);
-        }
-
-        return ip.getDefaultKey();
-    }
+    
+    public AtomicInteger checkOkCount = new AtomicInteger(0);
+    
+    public long checkRt = -1L;
 }

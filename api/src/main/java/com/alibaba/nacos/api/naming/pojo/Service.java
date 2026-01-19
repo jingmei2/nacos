@@ -13,111 +13,127 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
+
 package com.alibaba.nacos.api.naming.pojo;
 
-import com.alibaba.nacos.api.selector.AbstractSelector;
+import com.alibaba.nacos.api.common.Constants;
+import com.alibaba.nacos.api.exception.NacosException;
+import com.alibaba.nacos.api.exception.api.NacosApiException;
+import com.alibaba.nacos.api.model.NacosForm;
+import com.alibaba.nacos.api.model.v2.ErrorCode;
+import com.alibaba.nacos.api.selector.NoneSelector;
+import com.alibaba.nacos.api.selector.Selector;
+import com.alibaba.nacos.api.utils.StringUtils;
 
 import java.util.HashMap;
 import java.util.Map;
 
 /**
- * @author <a href="mailto:zpf.073@gmail.com">nkorange</a>
+ * Service of Nacos.
+ *
+ * <p>We introduce a 'service --> cluster --> instance' model, in which service stores a list of clusters, which contains a
+ * list of instances.
+ *
+ * <p>Typically we put some unique properties between instances to service level.
+ *
+ * @author nkorange
  */
-public class Service {
-
-    /**
-     * Service name
-     */
+public class Service implements NacosForm {
+    
+    private static final long serialVersionUID = -3470985546826874460L;
+    
+    private String namespaceId;
+    
+    private String groupName;
+    
     private String name;
-
-    /**
-     * Protect threshold
-     */
+    
+    private boolean ephemeral;
+    
     private float protectThreshold = 0.0F;
-
-    /**
-     * Application name of this service
-     */
-    private String app;
-
-    /**
-     * Service group is meant to classify services into different sets
-     */
-    private String group;
-
-    /**
-     * Health check mode
-     */
-    private String healthCheckMode;
-
-    /**
-     * Selector name of this service
-     */
-    private AbstractSelector selector;
-
-    private Map<String, String> metadata = new HashMap<String, String>();
-
-    public Service(String name) {
-        this.name = name;
+    
+    private Map<String, String> metadata = new HashMap<>();
+    
+    private Selector selector = new NoneSelector();
+    
+    public String getNamespaceId() {
+        return namespaceId;
     }
-
+    
+    public void setNamespaceId(String namespaceId) {
+        this.namespaceId = namespaceId;
+    }
+    
+    public String getGroupName() {
+        return groupName;
+    }
+    
+    public void setGroupName(String groupName) {
+        this.groupName = groupName;
+    }
+    
     public String getName() {
         return name;
     }
-
+    
     public void setName(String name) {
         this.name = name;
     }
-
-    public String getHealthCheckMode() {
-        return healthCheckMode;
+    
+    public boolean isEphemeral() {
+        return ephemeral;
     }
-
-    public void setHealthCheckMode(String healthCheckMode) {
-        this.healthCheckMode = healthCheckMode;
+    
+    public void setEphemeral(boolean ephemeral) {
+        this.ephemeral = ephemeral;
     }
-
+    
     public float getProtectThreshold() {
         return protectThreshold;
     }
-
+    
     public void setProtectThreshold(float protectThreshold) {
         this.protectThreshold = protectThreshold;
     }
-
-    public String getApp() {
-        return app;
-    }
-
-    public void setApp(String app) {
-        this.app = app;
-    }
-
-    public String getGroup() {
-        return group;
-    }
-
-    public void setGroup(String group) {
-        this.group = group;
-    }
-
+    
     public Map<String, String> getMetadata() {
         return metadata;
     }
-
+    
     public void setMetadata(Map<String, String> metadata) {
         this.metadata = metadata;
     }
-
+    
     public void addMetadata(String key, String value) {
         this.metadata.put(key, value);
     }
-
-    public AbstractSelector getSelector() {
+    
+    public Selector getSelector() {
         return selector;
     }
-
-    public void setSelector(AbstractSelector selector) {
+    
+    public void setSelector(Selector selector) {
         this.selector = selector;
+    }
+    
+    @Override
+    public void validate() throws NacosApiException {
+        fillDefaultValue();
+        if (StringUtils.isBlank(name)) {
+            throw new NacosApiException(NacosException.INVALID_PARAM, ErrorCode.PARAMETER_MISSING,
+                    "Required parameter 'name' type String is not present");
+        }
+    }
+    
+    /**
+     * fill default value.
+     */
+    public void fillDefaultValue() {
+        if (StringUtils.isBlank(namespaceId)) {
+            namespaceId = Constants.DEFAULT_NAMESPACE_ID;
+        }
+        if (StringUtils.isBlank(groupName)) {
+            groupName = Constants.DEFAULT_GROUP;
+        }
     }
 }

@@ -13,11 +13,14 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
+
 package com.alibaba.nacos.api.naming.listener;
 
 /**
- * event interface
- * @author <a href="mailto:zpf.073@gmail.com">nkorange</a>
+ * Event Interface.
+ *
+ * @author nkorange
  */
 public interface Event {
+
 }

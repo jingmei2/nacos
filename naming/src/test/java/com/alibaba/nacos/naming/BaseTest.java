@@ -13,38 +13,77 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
+
 package com.alibaba.nacos.naming;
 
-import com.alibaba.nacos.naming.core.DomainsManager;
-import com.alibaba.nacos.naming.misc.NetUtils;
-import com.alibaba.nacos.naming.raft.PeerSet;
-import com.alibaba.nacos.naming.raft.RaftCore;
-import com.alibaba.nacos.naming.raft.RaftPeer;
-import org.junit.Before;
+import com.alibaba.nacos.naming.core.DistroMapper;
+import com.alibaba.nacos.naming.misc.SwitchDomain;
+import com.alibaba.nacos.sys.env.EnvUtil;
+import com.alibaba.nacos.sys.utils.ApplicationUtils;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.Mock;
-import org.mockito.Mockito;
-import org.mockito.MockitoAnnotations;
+import org.mockito.Spy;
+import org.mockito.junit.jupiter.MockitoExtension;
+import org.springframework.context.ConfigurableApplicationContext;
+import org.springframework.mock.env.MockEnvironment;
+import org.springframework.test.web.servlet.request.MockHttpServletRequestBuilder;
 
-/**
- * @author <a href="mailto:zpf.073@gmail.com">nkorange</a>
- */
-public class BaseTest {
+import java.lang.reflect.Field;
 
+import static org.mockito.Mockito.doReturn;
+
+@ExtendWith(MockitoExtension.class)
+public abstract class BaseTest {
+    
+    protected static final String TEST_CLUSTER_NAME = "test-cluster";
+    
+    protected static final String TEST_SERVICE_NAME = "DEFAULT_GROUP@@test-service";
+    
+    protected static final String TEST_GROUP_NAME = "test-group-name";
+    
+    protected static final String TEST_NAMESPACE = "test-namespace";
+    
+    protected static final String TEST_IP = "1.1.1.1";
+    
+    protected static final String TEST_METADATA = "{\"label\":\"123\"}";
+    
+    protected static final String TEST_INSTANCE_INFO_LIST = "[{\"instanceId\":\"123\",\"ip\":\"1.1.1.1\","
+            + "\"port\":9870,\"weight\":2.0,\"healthy\":true,\"enabled\":true,\"ephemeral\":true"
+            + ",\"clusterName\":\"clusterName\",\"serviceName\":\"serviceName\",\"metadata\":{}}]";
+    
+    @Spy
+    protected ConfigurableApplicationContext context;
+    
     @Mock
-    public DomainsManager domainsManager;
+    protected DistroMapper distroMapper;
 
-    @Mock
-    public PeerSet peerSet;
+    @Spy
+    protected SwitchDomain switchDomain;
 
-    @Before
+    @Spy
+    protected MockEnvironment environment;
+    
+    @BeforeEach
     public void before() {
-        MockitoAnnotations.initMocks(this);
+        EnvUtil.setEnvironment(environment);
+        ApplicationUtils.injectContext(context);
+    }
+    
+    protected MockHttpServletRequestBuilder convert(Object simpleOb, MockHttpServletRequestBuilder builder) throws IllegalAccessException {
+        Field[] declaredFields = simpleOb.getClass().getDeclaredFields();
+        for (Field declaredField : declaredFields) {
+            declaredField.setAccessible(true);
+            builder.param(declaredField.getName(), String.valueOf(declaredField.get(simpleOb)));
+        }
+        return builder;
+    }
 
-        RaftPeer peer = new RaftPeer();
-        peer.ip = NetUtils.localServer();
-        RaftCore.setPeerSet(peerSet);
-        Mockito.when(peerSet.local()).thenReturn(peer);
-        Mockito.when(peerSet.getLeader()).thenReturn(peer);
-        Mockito.when(peerSet.isLeader(NetUtils.localServer())).thenReturn(true);
+    protected void mockInjectSwitchDomain() {
+        doReturn(switchDomain).when(context).getBean(SwitchDomain.class);
+    }
+
+    protected void mockInjectDistroMapper() {
+        doReturn(distroMapper).when(context).getBean(DistroMapper.class);
     }
 }

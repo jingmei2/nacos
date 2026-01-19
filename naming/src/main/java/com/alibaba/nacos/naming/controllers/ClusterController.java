@@ -13,93 +13,80 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
+
 package com.alibaba.nacos.naming.controllers;
 
-import com.alibaba.fastjson.JSON;
-import com.alibaba.fastjson.JSONObject;
-import com.alibaba.nacos.api.naming.pojo.AbstractHealthChecker;
+import com.alibaba.nacos.api.common.Constants;
+import com.alibaba.nacos.api.naming.CommonParams;
+import com.alibaba.nacos.api.naming.pojo.healthcheck.AbstractHealthChecker;
+import com.alibaba.nacos.api.naming.pojo.healthcheck.HealthCheckerFactory;
+import com.alibaba.nacos.auth.annotation.Secured;
+import com.alibaba.nacos.common.utils.ConvertUtils;
+import com.alibaba.nacos.common.utils.NumberUtils;
+import com.alibaba.nacos.common.utils.StringUtils;
+import com.alibaba.nacos.core.controller.compatibility.Compatibility;
+import com.alibaba.nacos.core.paramcheck.ExtractorManager;
 import com.alibaba.nacos.core.utils.WebUtils;
-import com.alibaba.nacos.naming.core.Cluster;
-import com.alibaba.nacos.naming.core.DomainsManager;
-import com.alibaba.nacos.naming.core.VirtualClusterDomain;
-import com.alibaba.nacos.naming.exception.NacosException;
-import com.alibaba.nacos.naming.misc.Loggers;
+import com.alibaba.nacos.naming.core.ClusterOperator;
+import com.alibaba.nacos.naming.core.ClusterOperatorV2Impl;
+import com.alibaba.nacos.naming.core.v2.metadata.ClusterMetadata;
 import com.alibaba.nacos.naming.misc.UtilsAndCommons;
-import org.apache.commons.lang3.BooleanUtils;
-import org.apache.commons.lang3.StringUtils;
-import org.apache.commons.lang3.math.NumberUtils;
-import org.springframework.beans.factory.annotation.Autowired;
+import com.alibaba.nacos.naming.paramcheck.NamingDefaultHttpParamExtractor;
+import com.alibaba.nacos.plugin.auth.constant.ActionTypes;
+import com.alibaba.nacos.plugin.auth.constant.ApiType;
+import org.springframework.web.bind.annotation.PutMapping;
 import org.springframework.web.bind.annotation.RequestMapping;
-import org.springframework.web.bind.annotation.RequestMethod;
 import org.springframework.web.bind.annotation.RestController;
 
-import javax.servlet.http.HttpServletRequest;
+import jakarta.servlet.http.HttpServletRequest;
 
 /**
- * @author <a href="mailto:zpf.073@gmail.com">nkorange</a>
+ * Cluster controller.
+ *
+ * @author nkorange
  */
+@Deprecated
 @RestController
-@RequestMapping(UtilsAndCommons.NACOS_NAMING_CONTEXT + "/cluster")
+@RequestMapping(UtilsAndCommons.NACOS_NAMING_CONTEXT + UtilsAndCommons.NACOS_NAMING_CLUSTER_CONTEXT)
+@ExtractorManager.Extractor(httpExtractor = NamingDefaultHttpParamExtractor.class)
 public class ClusterController {
-
-    @Autowired
-    protected DomainsManager domainsManager;
-
-    @RequestMapping(value = {"/update", "/add"}, method = RequestMethod.POST)
+    
+    private final ClusterOperatorV2Impl clusterOperatorV2;
+    
+    public ClusterController(ClusterOperatorV2Impl clusterOperatorV2) {
+        this.clusterOperatorV2 = clusterOperatorV2;
+    }
+    
+    /**
+     * Update cluster.
+     *
+     * @param request http request
+     * @return 'ok' if success
+     * @throws Exception if failed
+     */
+    @PutMapping
+    @Secured(action = ActionTypes.WRITE)
+    @Compatibility(apiType = ApiType.CONSOLE_API, alternatives = "PUT ${contextPath:nacos}/v3/console/ns/service/cluster")
     public String update(HttpServletRequest request) throws Exception {
-
-        String clusterName = WebUtils.required(request, "clusterName");
-        String serviceName = WebUtils.required(request, "serviceName");
-        String healthChecker = WebUtils.required(request, "healthChecker");
-        String metadata = WebUtils.optional(request, "metadata", StringUtils.EMPTY);
-        String checkPort = WebUtils.required(request, "checkPort");
-        String useInstancePort4Check = WebUtils.required(request, "useInstancePort4Check");
-
-        VirtualClusterDomain domain = (VirtualClusterDomain) domainsManager.getDomain(serviceName);
-        if (domain == null) {
-            throw new NacosException(NacosException.INVALID_PARAM, "service not found:" + serviceName);
-        }
-
-        Cluster cluster = domain.getClusterMap().get(clusterName);
-        if (cluster == null) {
-            Loggers.SRV_LOG.warn("UPDATE-CLUSTER", "cluster not exist, will create it: " + clusterName + ", service:" + serviceName);
-            cluster = new Cluster();
-            cluster.setName(clusterName);
-
-//            throw new NacosException(NacosException.INVALID_PARAM, "cluster not found:"+ clusterName + ", " + serviceName);
-        }
-
-        cluster.setDefCkport(NumberUtils.toInt(checkPort));
-        cluster.setUseIPPort4Check(BooleanUtils.toBoolean(useInstancePort4Check));
-
-        JSONObject healthCheckObj = JSON.parseObject(healthChecker);
-        AbstractHealthChecker abstractHealthChecker;
-
-        switch (healthCheckObj.getString("type")) {
-            case AbstractHealthChecker.Tcp.TYPE:
-                abstractHealthChecker = JSON.parseObject(healthChecker, AbstractHealthChecker.Tcp.class);
-                break;
-            case AbstractHealthChecker.Http.TYPE:
-                abstractHealthChecker = JSON.parseObject(healthChecker, AbstractHealthChecker.Http.class);
-                break;
-            case AbstractHealthChecker.Mysql.TYPE:
-                abstractHealthChecker = JSON.parseObject(healthChecker, AbstractHealthChecker.Mysql.class);
-                break;
-            default:
-                throw new NacosException(NacosException.INVALID_PARAM, "unknown health check type:" + healthChecker);
-        }
-
-        cluster.setHealthChecker(abstractHealthChecker);
-        cluster.setMetadata(UtilsAndCommons.parseMetadata(metadata));
-
-        domain.getClusterMap().put(clusterName, cluster);
-
-        domain.setLastModifiedMillis(System.currentTimeMillis());
-        domain.recalculateChecksum();
-        domain.valid();
-
-        domainsManager.easyAddOrReplaceDom(domain);
-
+        final String namespaceId = WebUtils
+                .optional(request, CommonParams.NAMESPACE_ID, Constants.DEFAULT_NAMESPACE_ID);
+        final String clusterName = WebUtils.required(request, CommonParams.CLUSTER_NAME);
+        final String serviceName = WebUtils.required(request, CommonParams.SERVICE_NAME);
+        ClusterMetadata clusterMetadata = new ClusterMetadata();
+        clusterMetadata.setHealthyCheckPort(NumberUtils.toInt(WebUtils.required(request, "checkPort")));
+        clusterMetadata.setUseInstancePortForCheck(
+                ConvertUtils.toBoolean(WebUtils.required(request, "useInstancePort4Check")));
+        AbstractHealthChecker healthChecker = HealthCheckerFactory
+                .deserialize(WebUtils.required(request, "healthChecker"));
+        clusterMetadata.setHealthChecker(healthChecker);
+        clusterMetadata.setHealthyCheckType(healthChecker.getType());
+        clusterMetadata.setExtendData(
+                UtilsAndCommons.parseMetadata(WebUtils.optional(request, "metadata", StringUtils.EMPTY)));
+        judgeClusterOperator().updateClusterMetadata(namespaceId, serviceName, clusterName, clusterMetadata);
         return "ok";
+    }
+    
+    private ClusterOperator judgeClusterOperator() {
+        return clusterOperatorV2;
     }
 }
